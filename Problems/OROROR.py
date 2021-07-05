@@ -1,6 +1,8 @@
 import os
 import sys
 from io import BytesIO, IOBase
+from operator import ior
+from functools import reduce
 BUFSIZE = 8192
 
 
@@ -10,7 +12,18 @@ class FastIO(IOBase):
     def __init__(self, file):
         self._fd = file.fileno()
         self.buffer = BytesIO()
+        self.writable = 'x' in file.mode or 'r' not in file.mode
         self.write = self.buffer.write if self.writable else None
+
+    def read(self):
+        while True:
+            b = os.read(self._fd, max(os.fstat(self._fd).st_size, BUFSIZE))
+            if not b:
+                break
+            ptr = self.buffer.tell()
+            self.buffer.seek(0, 2), self.buffer.write(b), self.buffer.seek(ptr)
+        self.newlines = 0
+        return self.buffer.read()
 
     def readline(self):
         while self.newlines == 0:
@@ -31,7 +44,9 @@ class IOWrapper(IOBase):
     def __init__(self, file):
         self.buffer = FastIO(file)
         self.flush = self.buffer.flush
+        self.writable = self.buffer.writable
         self.write = lambda s: self.buffer.write(s.encode('ascii'))
+        self.read = lambda: self.buffer.read().decode('ascii')
         self.readline = lambda: self.buffer.readline().decode('ascii')
 
 
@@ -39,25 +54,31 @@ sys.stdin, sys.stdout = IOWrapper(sys.stdin), IOWrapper(sys.stdout)
 def input(): return sys.stdin.readline().rstrip('\r\n')
 
 
-def solve(n, q, ls, queries):
-    for x in queries:
-        ls[x[0] - 1] = x[1]
-    print(ls)
-    k = len(ls) - len(set(ls))
-    return n - k + 1
+def solve(n, x, ls):
+    res = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            if reduce(ior, ls[i:j + 1]) >= x:
+                res.append(ls[i:j + 1])
+    minlength = min(map(len, res), default=0)
+    if minlength == n:
+        ans = [[1, n]]
+        count = 1
+    else:
+        ans = list(filter(lambda s: len(s) == minlength, res))
+        count = len(ans)
+    return [count, ans]
 
 
-res = []
 T = int(input())
+res = []
 for _ in range(T):
-    N, Q = map(int, input().split())
+    N, X = map(int, input().split())
     arr = list(map(int, input().split()))
-    LR = []
-    for _ in range(Q):
-        LR.append(list(map(int, input().split())))
-    res.append(solve(N, Q, arr, LR))
+    res.append(solve(N, X, arr))
 
+# [(1, [[3, 4]]), (1, [[1, 4]]), (0, [])]
 for x in res:
-    print(x)
-
-[5, 6, 1, 3, 1, 12, 7, 18, 6, 3]
+    print(x[0])
+    for y in x[1]:
+        print(" ".join(map(str, y)))
