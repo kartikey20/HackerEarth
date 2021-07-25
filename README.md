@@ -1,6 +1,6 @@
-# :page_facing_up: HackerRank Solutions
+# :page_facing_up: HackerEarth Solutions
 
-My solutions to some HackerRank problems.
+My solutions to some HackerEarth problems.
 
 ## :heartpulse: Contribute
 
